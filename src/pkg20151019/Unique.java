@@ -46,10 +46,12 @@ public class Unique {
 
         String spliter = ";";
         BufferedReader inbr = new BufferedReader(new FileReader(in));
-
+        System.err.println("loading fa @"+System.currentTimeMillis());
         fas = Fasta.fasta2list(inbr);
+        System.err.println("loaded fa @"+System.currentTimeMillis());
         Fasta targetfa = null;
-        filter = new HashSet<String>();
+        filter = new HashSet<String>(800000000);
+        System.err.println("hashset inited @"+System.currentTimeMillis());
         //make filter
         ExecutorService service = Executors.newFixedThreadPool(15);
         List<Future<HashSet<String>>> fus = new ArrayList<Future<HashSet<String>>>();
@@ -69,7 +71,6 @@ public class Unique {
         for (int i = 0; i < fus.size(); i++) {
             Future<HashSet<String>> f = fus.get(i);
             HashSet<String> result = f.get();
-            new Thread(new hashsetwriter(result, ids.get(i))).start();
             System.err.println("hashset: adding " + filter.size() + " + " + result.size() + " @" + System.currentTimeMillis());
             filter.addAll(result);
             System.err.println("hashset: " + ids.get(i) + " added, size: " + filter.size() + " @" + System.currentTimeMillis());
@@ -138,33 +139,21 @@ class chr implements Callable<HashSet<String>> {
             }
         }
         msg("processed " + fa.getName());
+        try {
+            File f = new File("xml", fa.getName() + ".xml");
+            if (f.exists() && f.isFile()) {
+                
+            }else{
+                XMLEncoder x = new XMLEncoder(new FileOutputStream(f));
+            x.writeObject(result);
+            x.close();
+            msg("outputed"+fa.getName());
+            }
+            
+        } catch (FileNotFoundException ex) {
+            Logger.getLogger(chr.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        
         return result;
     }
-}
-
-class hashsetwriter implements Runnable {
-
-    private HashSet<String> s;
-    private String name;
-
-    public hashsetwriter(HashSet<String> s, String name) {
-        this.s = s;
-        this.name = name;
-    }
-
-    @Override
-    public void run() {
-        try {
-            File f = new File("xml", name + ".xml");
-            if (f.exists() && f.isFile()) {
-                return;
-            }
-            XMLEncoder x = new XMLEncoder(new FileOutputStream(f));
-            x.writeObject(s);
-            x.close();
-        } catch (FileNotFoundException ex) {
-            Logger.getLogger(hashsetwriter.class.getName()).log(Level.SEVERE, null, ex);
-        }
-    }
-
 }
